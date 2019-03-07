@@ -1,0 +1,118 @@
+{*
+Example for DAC Click
+
+    Date          : Jul 2018.
+    Author        : Nenad Filipovic
+
+Test configuration TIVA :
+    
+    MCU              : TM4C129XNCZAD
+    Dev. Board       : EasyMx PRO v7 for TIVA ARM
+    ARM Compiler ver : v6.0.0.0
+
+---
+
+Description :
+
+The application is composed of three sections :
+
+- System Initialization - Initializes CS pin as OUTPUT, SPI and LOG.
+- Application Initialization - Initializes Driver enable's SPI and LOG.
+- Application Task - (code snippet) In this example the DAC click communicates with MCU through the SPI communicationand and send:
+1. data procentage value ( form 0 to 100 with step 20 [%]),
+2. data 12-bit value ( form 0 to 4095 with step 1000 ),
+and transforms it to the output voltage, ranging from 0 to Vref [mV]
+
+Additional Functions :
+
+- SPI
+- UART
+- Conversion
+
+*}
+program Click_DAC_TIVA;
+
+uses Click_DAC_types, Click_DAC_config;
+
+procedure systemInit(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_OUTPUT); 
+    mikrobus_spiInit(_MIKROBUS1, @_DAC_SPI_CFG[0]); 
+    mikrobus_logInit(_MIKROBUS2, 9600); 
+    Delay_100ms(); 
+
+end;
+
+procedure applicationInit(); 
+begin
+
+    dac_spiDriverInit(T_DAC_P(@_MIKROBUS1_GPIO), T_DAC_P(@_MIKROBUS1_SPI)); 
+    mikrobus_logWrite('          Initialisation', _LOG_LINE); 
+    mikrobus_logWrite('##################################', _LOG_LINE); 
+    mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+
+end;
+
+procedure applicationTask(); 
+var
+    strDACValue : array[15] of char;
+    strOutputVoltage : array[15] of char;
+    valueDAC : uint32_t;
+    valueDACPct : uint8_t;
+begin
+
+    mikrobus_logWrite('    ~ DAC Percentage Value ~', _LOG_LINE); 
+    mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+    valueDACPct := 0;
+    while (valueDACPct < 101) do 
+    begin
+        dac_setOutputVoltageProcentage(valueDACPct); 
+        LongIntToStr(valueDACPct, strDACValue);
+        mikrobus_logWrite(' Current DAC Value:', _LOG_TEXT); 
+        mikrobus_logWrite(strDACValue, _LOG_TEXT); 
+        mikrobus_logWrite(' %', _LOG_LINE); 
+        LongIntToStr((valueDACPct*33), strOutputVoltage);
+        mikrobus_logWrite(' Output Voltage: ~ ', _LOG_TEXT); 
+        mikrobus_logWrite(strOutputVoltage, _LOG_TEXT); 
+        mikrobus_logWrite(' mV', _LOG_LINE); 
+        mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+        Delay_ms(5000); 
+    valueDACPct := (valueDACPct + 20)
+    end;
+    mikrobus_logWrite('##################################', _LOG_LINE); 
+    mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+    Delay_1sec(); 
+    mikrobus_logWrite('    ~ DAC 12-bit Data Value ~', _LOG_LINE); 
+    mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+    valueDAC := 0;
+    while (valueDAC < 4096) do 
+    begin
+        dac_setOutVoltage(valueDAC); 
+        LongIntToStr(valueDAC, strDACValue);
+        mikrobus_logWrite(' Current DAC Value:', _LOG_TEXT); 
+        mikrobus_logWrite(strDACValue, _LOG_LINE); 
+        LongIntToStr(((valueDAC*220)/273), strOutputVoltage);
+        mikrobus_logWrite(' Output Voltage: ~ ', _LOG_TEXT); 
+        mikrobus_logWrite(strOutputVoltage, _LOG_TEXT); 
+        mikrobus_logWrite(' mV', _LOG_LINE); 
+        mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+        Delay_ms(5000); 
+    valueDAC := (valueDAC + 1000)
+    end;
+    mikrobus_logWrite('##################################', _LOG_LINE); 
+    mikrobus_logWrite('----------------------------------', _LOG_LINE); 
+    Delay_1sec(); 
+
+end;
+
+begin
+
+    systemInit(); 
+    applicationInit(); 
+    while (1) do 
+    begin 
+        applicationTask(); 
+    end;
+
+end.
